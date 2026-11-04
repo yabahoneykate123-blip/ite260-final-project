@@ -1,0 +1,592 @@
+from datetime import datetime
+
+# ANSI Color Codes
+RESET = "\033[0m"
+BOLD = "\033[1m"
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+MAGENTA = "\033[95m"
+CYAN = "\033[96m"
+
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "1234"
+
+patients = []
+
+services = [
+    "Vaccination",
+    "Dental Consultation",
+    "Medical Check-up",
+    "Laboratory Test",
+    "Eye Examination"
+]
+
+time_slots = [
+    "8:00 AM",
+    "9:00 AM",
+    "10:00 AM",
+    "11:00 AM",
+    "1:00 PM",
+    "2:00 PM",
+    "3:00 PM"
+]
+
+appointments = []
+history = []
+
+next_number = 1
+
+
+def register_patient():
+    print(f"\n{CYAN}{BOLD}===== PATIENT REGISTRATION ====={RESET}")
+
+    while True:
+        username = input("Create Username (e.g. Yaba2008): ")
+
+        has_letter = False
+        has_number = False
+        valid = True
+
+        for character in username:
+            if character in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                has_letter = True
+            elif character in "0123456789":
+                has_number = True
+            else:
+                valid = False
+
+        if not valid:
+            print(f"{RED}Username must contain letters and numbers only.{RESET}")
+            continue
+
+        if not has_letter or not has_number:
+            print(f"{RED}Username must contain both letters and numbers.{RESET}")
+            continue
+
+        exists = False
+
+        for patient in patients:
+            if patient["username"] == username:
+                exists = True
+                break
+
+        if exists:
+            print(f"{RED}Username already exists. Please try another.{RESET}")
+            continue
+
+        break
+
+    while True:
+        password = input("Create Password (at least 8 characters): ")
+
+        password_letter = False
+        password_number = False
+
+        for character in password:
+            if character in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                password_letter = True
+            elif character in "0123456789":
+                password_number = True
+
+        if len(password) < 8 or not password_letter or not password_number:
+            print(f"{RED}Password must have at least 8 characters, including letters and numbers.{RESET}")
+            continue
+
+        break
+
+    patients.append({
+        "username": username,
+        "password": password
+    })
+
+    print(f"\n{GREEN}{BOLD}Registration successful!{RESET}")
+    print(f"{GREEN}You can now log in.{RESET}")
+
+
+def book_appointment(username):
+    global next_number
+
+    print(f"\n{CYAN}{BOLD}===== BOOK APPOINTMENT ====={RESET}")
+
+    name = input("Patient name: ")
+
+    while True:
+        phone = input("Phone number (09XXXXXXXXX): ")
+
+        valid = True
+
+        if len(phone) != 11 or phone[:2] != "09":
+            valid = False
+        else:
+            for character in phone:
+                if character not in "0123456789":
+                    valid = False
+                    break
+
+        if valid:
+            break
+
+        print(f"{RED}Invalid phone number. Use 09XXXXXXXXX.{RESET}")
+
+    print(f"\n{YELLOW}{BOLD}Clinic Services:{RESET}")
+
+    for i in range(len(services)):
+        print(f"{CYAN}{i + 1}{RESET} {services[i]}")
+
+    while True:
+        try:
+            choice = int(input("Choose service: "))
+
+            if 1 <= choice <= len(services):
+                break
+
+            print(f"{RED}Invalid service. Please choose from the list.{RESET}")
+
+        except ValueError:
+            print(f"{RED}Invalid input. Please enter a number.{RESET}")
+
+    service = services[choice - 1]
+
+    while True:
+        date = input("Date (MM/DD/YYYY): ")
+
+        try:
+            appointment_date = datetime.strptime(
+                date, "%m/%d/%Y"
+            ).date()
+
+            today = datetime.now().date()
+
+            if appointment_date.year < 2026:
+                print(f"{RED}Invalid date. The year must be 2026 or later.{RESET}")
+                continue
+
+            if appointment_date < today:
+                print(f"{RED}Invalid date. Please choose today or a future date.{RESET}")
+                continue
+
+            break
+
+        except ValueError:
+            print(f"{RED}Invalid date. Please use MM/DD/YYYY.{RESET}")
+
+    date = appointment_date.strftime("%m/%d/%Y")
+
+    while True:
+        print(f"\n{YELLOW}{BOLD}Available Time Slots:{RESET}")
+
+        available_slots = []
+        current_time = datetime.now()
+
+        for time_slot in time_slots:
+            slot_time = datetime.strptime(
+                time_slot, "%I:%M %p"
+            ).time()
+
+            occupied = False
+
+            if appointment_date == current_time.date():
+                if slot_time <= current_time.time():
+                    continue
+
+            for appointment in appointments:
+                if (
+                    appointment["date"] == date
+                    and appointment["time"] == time_slot
+                ):
+                    occupied = True
+                    break
+
+            if not occupied:
+                for appointment in history:
+                    if (
+                        appointment["status"] == "Approved"
+                        and appointment["date"] == date
+                        and appointment["time"] == time_slot
+                    ):
+                        occupied = True
+                        break
+
+            if not occupied:
+                available_slots.append(time_slot)
+
+        if len(available_slots) == 0:
+            print(f"{RED}No available time slots for this date.{RESET}")
+            return
+
+        for i in range(len(available_slots)):
+            print(f"{CYAN}{i + 1}{RESET} {available_slots[i]}")
+
+        while True:
+            try:
+                time_choice = int(input("Choose time: "))
+
+                if 1 <= time_choice <= len(available_slots):
+                    break
+
+                print(f"{RED}Invalid time. Please choose from the list.{RESET}")
+
+            except ValueError:
+                print(f"{RED}Invalid input. Please enter a number.{RESET}")
+
+        time = available_slots[time_choice - 1]
+
+        occupied = False
+
+        for appointment in appointments:
+            if (
+                appointment["date"] == date
+                and appointment["time"] == time
+            ):
+                occupied = True
+                break
+
+        if not occupied:
+            for appointment in history:
+                if (
+                    appointment["status"] == "Approved"
+                    and appointment["date"] == date
+                    and appointment["time"] == time
+                ):
+                    occupied = True
+                    break
+
+        if not occupied:
+            break
+
+        print(f"{RED}That time slot is already occupied. Please choose again.{RESET}")
+
+    appointment = {
+        "number": next_number,
+        "username": username,
+        "name": name,
+        "phone": phone,
+        "service": service,
+        "date": date,
+        "time": time,
+        "status": "Pending"
+    }
+
+    appointments.append(appointment)
+
+    print(f"\n{GREEN}{BOLD}===== APPOINTMENT SUBMITTED ====={RESET}")
+    print(f"{CYAN}Appointment No.:{RESET}", next_number)
+    print(f"{CYAN}Patient:{RESET}", name)
+    print(f"{CYAN}Phone:{RESET}", phone)
+    print(f"{CYAN}Service:{RESET}", service)
+    print(f"{CYAN}Date:{RESET}", date)
+    print(f"{CYAN}Time:{RESET}", time)
+    print(f"{CYAN}Status:{RESET} {YELLOW}Pending{RESET}")
+
+    next_number += 1
+
+
+def cancel_appointment(username):
+    patient_appointments = []
+
+    print(f"\n{CYAN}{BOLD}===== CANCEL APPOINTMENT ====={RESET}")
+
+    for appointment in appointments:
+        if appointment["username"] == username:
+            patient_appointments.append(appointment)
+
+    if len(patient_appointments) == 0:
+        print(f"{YELLOW}You have no pending appointments to cancel.{RESET}")
+        return
+
+    display_appointments_table(patient_appointments)
+
+    while True:
+        try:
+            number = int(input(
+                "\nEnter appointment number to cancel (0 to go back): "
+            ))
+        except ValueError:
+            print(f"{RED}Invalid number. Please enter a number.{RESET}")
+            continue
+
+        if number == 0:
+            return
+
+        found = None
+
+        for appointment in appointments:
+            if (
+                appointment["number"] == number
+                and appointment["username"] == username
+            ):
+                found = appointment
+                break
+
+        if found is None:
+            print(f"{RED}Appointment not found or it does not belong to your account.{RESET}")
+            continue
+
+        found["status"] = "Cancelled"
+        history.append(found.copy())
+        appointments.remove(found)
+
+        print(f"\n{GREEN}Appointment cancelled successfully.{RESET}")
+        print(f"{YELLOW}The time slot is available again.{RESET}")
+        return
+
+
+def display_appointments_table(appointment_list):
+    if len(appointment_list) == 0:
+        print(f"{YELLOW}No appointment records.{RESET}")
+        return
+
+    print(CYAN + "-" * 125 + RESET)
+    print(
+        f"{CYAN}| {RESET}{BOLD}" + "Appointment No.".ljust(15) +
+        f"{RESET}{CYAN}| {RESET}{BOLD}" + "Name".ljust(18) +
+        f"{RESET}{CYAN}| {RESET}{BOLD}" + "Username".ljust(15) +
+        f"{RESET}{CYAN}| {RESET}{BOLD}" + "Phone".ljust(14) +
+        f"{RESET}{CYAN}| {RESET}{BOLD}" + "Service".ljust(23) +
+        f"{RESET}{CYAN}| {RESET}{BOLD}" + "Date".ljust(12) +
+        f"{RESET}{CYAN}| {RESET}{BOLD}" + "Time".ljust(10) +
+        f"{RESET}{CYAN}| {RESET}{BOLD}" + "Status".ljust(10) + f"{RESET}{CYAN}|{RESET}"
+    )
+    print(CYAN + "-" * 125 + RESET)
+
+    for appointment in appointment_list:
+        status_text = appointment["status"].ljust(10)
+        if appointment["status"] == "Approved":
+            colored_status = f"{GREEN}{status_text}{RESET}"
+        elif appointment["status"] == "Pending":
+            colored_status = f"{YELLOW}{status_text}{RESET}"
+        else:
+            colored_status = f"{RED}{status_text}{RESET}"
+
+        print(
+            f"{CYAN}| {RESET}" + str(appointment["number"]).ljust(15) +
+            f"{CYAN}| {RESET}" + appointment["name"][:18].ljust(18) +
+            f"{CYAN}| {RESET}" + appointment["username"][:15].ljust(15) +
+            f"{CYAN}| {RESET}" + appointment["phone"][:14].ljust(14) +
+            f"{CYAN}| {RESET}" + appointment["service"][:23].ljust(23) +
+            f"{CYAN}| {RESET}" + appointment["date"].ljust(12) +
+            f"{CYAN}| {RESET}" + appointment["time"].ljust(10) +
+            f"{CYAN}| {RESET}" + colored_status + f"{CYAN}|{RESET}"
+        )
+
+    print(CYAN + "-" * 125 + RESET)
+
+
+def view_appointments():
+    print(f"\n{CYAN}{BOLD}===== PENDING APPOINTMENTS ====={RESET}")
+    display_appointments_table(appointments)
+
+
+def check_appointment_status(username):
+    patient_appointments = []
+
+    print(f"\n{CYAN}{BOLD}===== MY APPOINTMENT STATUS ====={RESET}")
+
+    for appointment in appointments:
+        if appointment["username"] == username:
+            patient_appointments.append(appointment)
+
+    for appointment in history:
+        if appointment["username"] == username:
+            patient_appointments.append(appointment)
+
+    if len(patient_appointments) == 0:
+        print(f"{YELLOW}You don't have any appointment.{RESET}")
+        return
+
+    display_appointments_table(patient_appointments)
+
+
+def process_appointment(status):
+    if len(appointments) == 0:
+        print(f"\n{YELLOW}No pending appointments.{RESET}")
+        return
+
+    view_appointments()
+
+    while True:
+        try:
+            number = int(input(
+                "\nEnter appointment number (0 to go back): "
+            ))
+        except ValueError:
+            print(f"{RED}Invalid number. Please enter a number.{RESET}")
+            continue
+
+        if number == 0:
+            return
+
+        found = None
+
+        for appointment in appointments:
+            if appointment["number"] == number:
+                found = appointment
+                break
+
+        if found is None:
+            print(f"{RED}Appointment not found. Please try again.{RESET}")
+            continue
+
+        found["status"] = status
+
+        history.append(found.copy())
+        appointments.remove(found)
+
+        status_color = GREEN if status == "Approved" else RED
+        print(f"\n{status_color}{BOLD}Appointment {status.lower()}!{RESET}")
+        print(f"{CYAN}Patient:{RESET}", found["name"])
+        print(f"{CYAN}Phone:{RESET}", found["phone"])
+
+        if status == "Approved":
+            print(f"{GREEN}Thanks for booking. We care for you!{RESET}")
+        else:
+            print(f"{YELLOW}The time slot is available again.{RESET}")
+
+        return
+
+
+def view_history():
+    print(f"\n{CYAN}{BOLD}===== APPOINTMENT HISTORY ====={RESET}")
+    display_appointments_table(history)
+
+
+def admin_login():
+    print(f"\n{CYAN}{BOLD}===== ADMIN LOGIN ====={RESET}")
+
+    username = input("Username: ")
+    password = input("Password: ")
+
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        print(f"\n{GREEN}{BOLD}Login successful!{RESET}")
+        admin_menu()
+    else:
+        print(f"\n{RED}Incorrect username or password.{RESET}")
+
+
+def patient_login():
+    print(f"\n{CYAN}{BOLD}===== PATIENT LOGIN ====={RESET}")
+
+    username = input("Username: ")
+    password = input("Password: ")
+
+    for patient in patients:
+        if (
+            patient["username"] == username
+            and patient["password"] == password
+        ):
+            print(f"\n{GREEN}{BOLD}Login successful!{RESET}")
+            patient_menu(username)
+            return
+
+    print(f"\n{RED}Invalid username or password.{RESET}")
+
+
+def admin_menu():
+    while True:
+        print(f"\n{CYAN}{BOLD}===== ADMIN MENU ====={RESET}")
+        print(f"{YELLOW}1.{RESET} View Pending Appointments")
+        print(f"{YELLOW}2.{RESET} Approve Appointment")
+        print(f"{YELLOW}3.{RESET} Reject Appointment")
+        print(f"{YELLOW}4.{RESET} Appointment History")
+        print(f"{YELLOW}5.{RESET} Logout")
+
+        choice = input("Choose: ")
+
+        if choice == "1":
+            view_appointments()
+
+        elif choice == "2":
+            process_appointment("Approved")
+
+        elif choice == "3":
+            process_appointment("Rejected")
+
+        elif choice == "4":
+            view_history()
+
+        elif choice == "5":
+            print(f"{YELLOW}Logged out.{RESET}")
+            break
+
+        else:
+            print(f"{RED}Invalid choice.{RESET}")
+
+
+def patient_menu(username):
+    while True:
+        print(f"\n{CYAN}{BOLD}===== PATIENT MENU ====={RESET}")
+        print(f"{YELLOW}1.{RESET} Book Appointment")
+        print(f"{YELLOW}2.{RESET} Check Appointment Status")
+        print(f"{YELLOW}3.{RESET} Cancel Appointment")
+        print(f"{YELLOW}4.{RESET} Logout")
+
+        choice = input("Choose: ")
+
+        if choice == "1":
+            book_appointment(username)
+
+        elif choice == "2":
+            check_appointment_status(username)
+
+        elif choice == "3":
+            cancel_appointment(username)
+
+        elif choice == "4":
+            print(f"{YELLOW}Logged out.{RESET}")
+            break
+
+        else:
+            print(f"{RED}Invalid choice.{RESET}")
+
+
+def Patient():
+    while True:
+        print(f"\n{CYAN}{BOLD}===== PATIENT ACCOUNT ====={RESET}")
+        print(f"{YELLOW}1.{RESET} Register Account")
+        print(f"{YELLOW}2.{RESET} Log In")
+        print(f"{YELLOW}3.{RESET} Back")
+
+        choice = input("Input Number: ")
+
+        if choice == "1":
+            register_patient()
+
+        elif choice == "2":
+            patient_login()
+
+        elif choice == "3":
+            break
+
+        else:
+            print(f"{RED}Invalid choice.{RESET}")
+
+
+def Clinic():
+    while True:
+        print(f"\n{CYAN}{BOLD}======================================{RESET}")
+        print(f"{GREEN}{BOLD} CLINIC SERVICE APPOINTMENT SYSTEM{RESET}")
+        print(f"{CYAN}{BOLD}======================================{RESET}")
+        print(f"{YELLOW}1.{RESET} Patient")
+        print(f"{YELLOW}2.{RESET} Admin / Staff")
+        print(f"{YELLOW}3.{RESET} Exit")
+        print(f"{CYAN}{BOLD}======================================{RESET}")
+
+        choice = input("Choose: ")
+
+        if choice == "1":
+            Patient()
+
+        elif choice == "2":
+            admin_login()
+
+        elif choice == "3":
+            print(f"\n{GREEN}{BOLD}Thank you for using the system!{RESET}")
+            break
+
+        else:
+            print(f"{RED}Invalid choice.{RESET}")
+
+
+Clinic()
